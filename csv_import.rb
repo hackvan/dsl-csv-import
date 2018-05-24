@@ -55,11 +55,11 @@ class CSVImport
   end
 end
 
-records = CSVImport.from_file('importer_people.csv') do |config|
+records = CSVImport.from_file('people.csv') do |config|
   config.string :first_name, column: 1
   config.string :last_name, column: 2
   config.integer :age, column: 3
   config.decimal :salary, column: 4
 end
 
-p records
+puts records
