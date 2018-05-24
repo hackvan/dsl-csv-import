@@ -1,57 +1,58 @@
 require 'csv'
 
-class CSVImportSchema
-  attr_reader :columns
-  Column = Struct.new(:name, :col_number, :type)
-
-  def initialize
-    @columns = []
-  end
-
-  def string(name, column:)
-    @columns << Column.new(name, column, ->(x) { x.to_s })
-  end
-
-  def integer(name, column:)
-    @columns << Column.new(name, column, ->(x) { x.to_i })
-  end
-
-  def decimal(name, column:)
-    @columns << Column.new(name, column, ->(x) { x.to_f })
-  end
-end
-
-class CSVImport
-  attr_reader :schema
-
-  def initialize
-    @schema = CSVImportSchema.new
-  end
-
-  # define the method in a more explicit form:
-  # def self.from_file(filepath, &block)
-  #   schema = CSVImportSchema.new()
-  #   block.call(schema)
-  # end
+module CSVImport
   def self.from_file(filepath)
-    import = new
-    yield import.schema
-    rows = CSV.read(filepath, col_sep: ';')
-    import.process(rows)
+    schema = Schema.new
+    yield schema
+    Importer.new(schema).import(filepath)
   end
   
-  def process(rows)
-    rows.map { |row| process_row(row) }
+  class Schema
+    attr_reader :columns
+    Column = Struct.new(:name, :col_number, :type)
+
+    def initialize
+      @columns = []
+    end
+
+    def string(name, column:)
+      @columns << Column.new(name, column, ->(x) { x.to_s })
+    end
+
+    def integer(name, column:)
+      @columns << Column.new(name, column, ->(x) { x.to_i })
+    end
+
+    def decimal(name, column:)
+      @columns << Column.new(name, column, ->(x) { x.to_f })
+    end
   end
 
-  private
+  class Importer
+    attr_reader :schema
 
-  def process_row(row)
-    obj = {}
-    @schema.columns.each do |col|
-      obj[col.name] = col.type.call(row[col.col_number - 1])
+    def initialize(schema)
+      @schema = schema
     end
-    obj
+
+    def import(filepath)
+      rows = CSV.read(filepath, col_sep: ';')
+      process(rows)
+    end
+
+    private
+
+    def process(rows)
+      rows.map { |row| process_row(row) }
+    end
+
+    def process_row(row)
+      obj = {}
+      @schema.columns.each do |col|
+        obj[col.name] = col.type.call(row[col.col_number - 1])
+      end
+      obj
+    end
   end
 end
 
